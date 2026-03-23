@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/middleware"
-	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +24,7 @@ func NewEmployeeHandler(employeeService *services.EmployeeService) *EmployeeHand
 func (h *EmployeeHandler) GetAll(c *gin.Context) {
 	list, err := h.employeeService.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -34,12 +34,12 @@ func (h *EmployeeHandler) GetAll(c *gin.Context) {
 func (h *EmployeeHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 	profile, err := h.employeeService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error: "not_found", Code: 404, Message: "Профиль сотрудника не найден",
 		})
 		return
@@ -52,7 +52,7 @@ func (h *EmployeeHandler) GetMe(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 	profile, err := h.employeeService.GetMyProfile(claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error: "not_found", Code: 404, Message: "Профиль не найден",
 		})
 		return
@@ -63,25 +63,24 @@ func (h *EmployeeHandler) GetMe(c *gin.Context) {
 // POST /api/v1/employees  — нанять сотрудника (HR, ADMIN)
 // ТЗ 2.3.4: HR создаёт нового сотрудника в системе
 func (h *EmployeeHandler) Hire(c *gin.Context) {
-	var req models.HireEmployeeRequest
+	var req dto.HireEmployeeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 
-	// Хешируем пароль здесь, передаём уже готовый хеш в сервис
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	req.PasswordHash = string(hash)
 
 	profile, err := h.employeeService.HireEmployee(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "hire_failed", Code: 400, Message: err.Error(),
 		})
 		return
@@ -94,18 +93,16 @@ func (h *EmployeeHandler) Hire(c *gin.Context) {
 func (h *EmployeeHandler) UpdateMySchedule(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 
-	var body struct {
-		Schedule string `json:"schedule" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+	var req dto.UpdateScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 
-	if err := h.employeeService.UpdateSchedule(claims.UserID, body.Schedule); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+	if err := h.employeeService.UpdateSchedule(claims.UserID, req.Schedule); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "update_failed", Code: 400, Message: err.Error(),
 		})
 		return
@@ -118,22 +115,20 @@ func (h *EmployeeHandler) UpdateMySchedule(c *gin.Context) {
 func (h *EmployeeHandler) AssignToSalon(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 
-	var body struct {
-		SalonID uint `json:"salon_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+	var req dto.AssignSalonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 
-	if err := h.employeeService.AssignToSalon(uint(id), body.SalonID); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+	if err := h.employeeService.AssignToSalon(uint(id), req.SalonID); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Сотрудник прикреплён к салону"})
@@ -145,7 +140,7 @@ func (h *EmployeeHandler) RemoveFromSalon(c *gin.Context) {
 	salonID, _ := strconv.ParseUint(c.Param("salonId"), 10, 64)
 
 	if err := h.employeeService.RemoveFromSalon(uint(id), uint(salonID)); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Сотрудник откреплён от салона"})

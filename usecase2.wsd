@@ -1,0 +1,61 @@
+@startuml bradobrei-usecase
+
+' 1. Принудительный горизонтальный режим
+left to right direction
+
+' 2. Сначала объявляем акторов (левая колонка)
+actor "Клиент" as Client
+actor "Сотрудник" as Staff
+actor "Мастер" as Master
+actor "Персонал" as Office
+actor "Администратор" as Admin
+
+Staff <|-- Master
+Staff <|-- Office
+Staff <|-- Admin
+
+' 3. Группируем систему
+rectangle "Брадобрей-пати" as System {  
+  (Просмотр каталога услуг) as View
+  (Запись на услугу) as Book
+  (Оставить отзыв) as Feedback
+  (Оплата услуги) as Pay
+  
+  (Управление графиком работы) as Schedule
+  (Подтверждение записи) as Confirm
+  (Списание расходных материалов) as Inventory
+  
+  (Генерация аналитических отчетов) as Reports
+  (Управление персоналом) as HR
+  
+  (Полное управление данными ИС) as FullAccess
+  (Настройка ролей доступа) as Roles
+}
+
+' 4. Объявляем Auth (он должен быть справа)
+(Авторизация) as Auth
+
+' 5. Связи
+Client -- View
+Client -- Book
+Client -- Feedback
+Client -- Pay
+
+Master -- Schedule
+Master -- Confirm
+Master -- Inventory
+
+Office -- Reports
+Office -- HR
+
+Admin -- FullAccess
+Admin -- Roles
+
+' 6. Фиксация положения Auth справа через скрытую связь от самого правого элемента
+' Если Reports справа в прямоугольнике, то Auth будет еще правее
+Reports -[hidden]right-> Auth
+
+' 7. Использование точечных линий для include (они меньше влияют на макет)
+Book ..> Auth : <<include>>
+Reports ..> Auth : <<include>>
+@enduml

@@ -1,0 +1,94 @@
+@startuml bradobrei_c4_component_final
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+title Схема компонентов Backend API Application (Уровень L3) — Финальная версия с картографическим UI-сервисом
+
+' === Основные контейнеры ===
+Container(web_app, "Single-Page Application", "React / TypeScript", "Клиентское веб-приложение. Интерфейс пользователя, вызов GET /api/v1/salons и отрисовка карты через JS SDK")
+
+
+' === Backend API Application ===
+System_Boundary(api_boundary, "Backend API Application", "Java + Spring Boot", "Бизнес-логика, RBAC (7 ролей), валидация, обработка запросов") {
+
+    ' ------------------- Controller Layer -------------------
+    System_Boundary(controllers_layer, "Controller Layer\n(Spring MVC REST + Spring Security)") {
+        Component(auth_ctrl, "Auth Controller", "Spring Security", "Аутентификация, выдача JWT, проверка 7 ролей")
+        Component(booking_ctrl, "Booking Controller", "Spring MVC REST", "Эндпоинты создания, редактирования и просмотра бронирований")
+        Component(report_ctrl, "Report Controller", "Spring MVC REST", "Эндпоинты запроса формирования 5 видов PDF-отчетов")
+        Component(salon_ctrl, "Salon Controller", "Spring MVC REST", "Эндпоинты управления салонами и получения списка с координатами (GET /api/v1/salons)")
+    }
+
+    ' ------------------- Service Layer -------------------
+    System_Boundary(services_layer, "Service Layer\n(Бизнес-логика)") {
+        Component(auth_svc, "Auth Service", "Java Service", "Логика аутентификации и авторизации")
+        Component(booking_svc, "Booking Service", "Java Service", "Проверка длительности (≥1 ч), пересечений, расчёт стоимости, вызов оплаты")
+        Component(inventory_svc, "Inventory Service", "Java Service", "Списание расходных материалов при оказании услуг")
+        Component(report_svc, "Report Service", "Java Service", "Подготовка данных для отчётов и постановка задачи в очередь")
+        Component(payment_svc, "Payment Service", "Java Service", "Интеграция и проведение платежей")
+        Component(notification_svc, "Notification Service", "Java Service", "Формирование и отправка уведомлений")
+        Component(salon_svc, "Salon Service", "Java Service", "Бизнес-логика салонов, расписание, характеристики, валидация адресов")
+    }
+
+    ' ------------------- Repository Layer -------------------
+    System_Boundary(repositories_layer, "Repository Layer\n(Spring Data JPA)") {
+        Component(user_repo, "UserRepository", "Spring Data JPA", "Работа с пользователями и ролями")
+        Component(booking_repo, "BookingRepository", "Spring Data JPA", "CRUD операций с бронированиями")
+        Component(inventory_repo, "InventoryRepository", "Spring Data JPA", "Управление остатками материалов")
+        Component(report_repo, "ReportRepository", "Spring Data JPA", "Агрегированные запросы для отчётов")
+        Component(salon_repo, "SalonRepository", "Spring Data JPA", "Данные о салонах и их расписании")
+    }
+    
+    ContainerDb(database, "Центральная БД", "PostgreSQL + PostGIS", "Хранение всех данных системы (пользователи, бронирования, салоны, геопозиции, материалы)")
+
+}
+
+' === Внешние системы ===
+System_Ext(payment_gateway, "Платежный шлюз", "Внешний провайдер", "Проведение онлайн-платежей")
+System_Ext(geo_coder, "Geocoder API", "Yandex / Google API", "Серверная валидация адресов и координат (вызывается из Salon Service)")
+System_Ext(message_queue, "Очередь сообщений", "RabbitMQ / Redis", "Асинхронный буфер тяжёлых задач (PDF, рассылки)")
+System_Ext(report_worker, "Воркер отчетности", "Go / Python", "Фоновая генерация PDF-отчётов")
+System_Ext(notification_ext, "Сервис уведомлений", "SMS / Email / Push", "Внешний сервис оповещений")
+
+' === Новый компонент ===
+System_Ext(map_ui_service, "Картографический сервис UI", "Yandex Maps / Google Maps JS SDK", "Клиентская отрисовка интерактивной карты салонов и маркеров. Подключён к SPA. Белый список доменов настроен в панели геосервиса")
+' === Связи ===
+Rel(web_app, auth_ctrl, "Передача учётных данных", "JSON/HTTPS")
+Rel(web_app, booking_ctrl, "Запросы на бронирование / просмотр", "JSON/HTTPS")
+Rel(web_app, report_ctrl, "Запрос PDF-отчёта", "JSON/HTTPS")
+Rel(web_app, salon_ctrl, "Запрос списка салонов с координатами (GET /api/v1/salons)", "JSON/HTTPS")
+Rel(web_app, map_ui_service, "Загрузка карты и отрисовка маркеров", "JS SDK / HTTPS")
+
+' Внутри Backend API (строгое соблюдение слоёв)
+Rel(auth_ctrl, auth_svc, "Проверка учётных данных")
+Rel(auth_svc, user_repo, "Проверка пользователя и ролей")
+
+Rel(booking_ctrl, booking_svc, "Создание / редактирование записи")
+Rel(booking_svc, booking_repo, "CRUD бронирований")
+Rel(booking_svc, salon_svc, "Проверка расписания салона")
+Rel(booking_svc, inventory_svc, "Списание материалов")
+Rel(booking_svc, payment_svc, "Инициирование оплаты")
+Rel(booking_svc, notification_svc, "Отправка уведомления клиенту")
+
+Rel(salon_ctrl, salon_svc, "Делегирование запросов на салоны")
+Rel(salon_svc, salon_repo, "CRUD данных о салонах и расписании")
+Rel(salon_svc, geo_coder, "Валидация адреса салона")
+
+Rel(payment_svc, payment_gateway, "Проведение платежа", "HTTPS")
+
+Rel(report_ctrl, report_svc, "Запрос формирования отчёта")
+Rel(report_svc, report_repo, "Сбор агрегированных данных")
+Rel(report_svc, message_queue, "Постановка задачи на генерацию PDF")
+
+Rel(notification_svc, notification_ext, "Отправка уведомления", "HTTPS")
+
+Rel(message_queue, report_worker, "Получение задачи на генерацию")
+Rel(report_worker, database, "Прямой SQL-доступ для чтения данных отчёта")
+
+Rel(inventory_svc, inventory_repo, "Управление остатками материалов")
+
+Rel(repositories_layer, database, "Выполнение SQL-запросов", "JDBC")
+
+@enduml

@@ -1,0 +1,190 @@
+@startuml bradobrei_class_diagram_final_gost
+
+title Диаграмма классов ИС "Брадобрей-пати"
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam monochrome true
+skinparam ArrowThickness 1.3
+
+' ====================== ENUMS ======================
+enum UserRole <<enumeration>> {
+  CLIENT
+  BASIC_MASTER
+  ADVANCED_MASTER
+  HR_SPECIALIST
+  ACCOUNTANT
+  NETWORK_MANAGER
+  ADMINISTRATOR
+}
+
+enum BookingStatus <<enumeration>> {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus <<enumeration>> {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+' ====================== КЛАССЫ ======================
+class User {
+  - id : Long <<PK>>
+  - username : String
+  - passwordHash : String
+  - fullName : String <<ФИО>>
+  - phone : String
+  - email : String
+  - role : UserRole
+  - createdAt : LocalDateTime
+  --
+  + getAuthorities()
+}
+
+class EmployeeProfile {
+  - id : Long <<PK>>
+  - specialization : String
+  - expectedSalary : BigDecimal
+  - workSchedule : String <<JSON>>
+}
+
+class Salon {
+  - id : Long <<PK>>
+  - name : String
+  - address : String
+  - location : Point <<PostGIS>>
+  - workingHours : String
+  - status : String <<OPEN/CLOSED>>
+  - maxStaff : Integer
+  - baseHourlyRate : BigDecimal
+  --
+  + isOpenAt(LocalDateTime) : boolean
+  + getAvailableMasters(LocalDateTime, int) : List<User>
+}
+
+class Service {
+  - id : Long <<PK>>
+  - name : String
+  - description : String
+  - price : BigDecimal
+  - durationMinutes : int <<≥ 60>>
+  --
+  + calculateCost(int quantity) : BigDecimal
+}
+
+class Material {
+  - id : Long <<PK>>
+  - name : String
+  - unit : String
+}
+
+class Booking {
+  - id : Long <<PK>>
+  - startTime : LocalDateTime
+  - durationMinutes : int
+  - totalPrice : BigDecimal
+  - status : BookingStatus
+  - notes : String
+  --
+  + validateNoOverlap() : boolean
+  + calculateTotal() : BigDecimal
+  + writeOffMaterials()
+  + confirm()
+  + cancel()
+}
+
+class BookingItem {
+  - quantity : int <<обычно 1>>
+  - priceAtBooking : BigDecimal
+}
+
+class Payment {
+  - id : Long <<PK>>
+  - amount : BigDecimal
+  - status : PaymentStatus
+  - externalTransactionId : String
+  - createdAt : LocalDateTime
+  - completedAt : LocalDateTime
+}
+
+class Review {
+  - id : Long <<PK>>
+  - text : String
+  - createdAt : LocalDateTime
+  - rating : Integer <<1-5, опционально>>
+}
+
+class ServiceMaterial {
+  - quantityPerUse : double
+}
+
+class Inventory {
+  - id : Long <<PK>>
+  - quantity : int
+  - lastUpdated : LocalDateTime
+}
+
+' ====================== СВЯЗИ (точно в твоём стиле) ======================
+
+' 1. Пользователь ↔️ Профиль — КОМПОЗИЦИЯ
+User "1" *-- "0..1" EmployeeProfile : имеет профиль
+
+' 2. Сотрудник ↔️ Салон — АГРЕГАЦИЯ (многие-ко-многим, ключевой момент для отчёта 2.2.1)
+EmployeeProfile "0..*" --o "0..*" Salon : закреплен за
+
+' 3. Бронирование ↔️ Салон — АССОЦИАЦИЯ
+Booking "0..*" --> "1" Salon : происходит в
+
+' 4. Бронирование ↔️ Пользователь — АССОЦИАЦИЯ (две роли, как у тебя в последнем варианте)
+Booking "0..*" --> "1" User : забронировал\n(клиент)
+Booking "0..*" --> "0..1" User : выполняет\n(мастер)
+
+' 5. Бронирование ↔️ BookingItem — КОМПОЗИЦИЯ
+Booking "1" *-- "1..*" BookingItem : состоит из
+BookingItem "1" --> "1" Service : услуга
+
+' 6. Салон ↔️ Inventory — КОМПОЗИЦИЯ
+Salon "1" *-- "0..*" Inventory : содержит на складе
+Inventory "1" --> "1" Material : материал
+
+' 7. Услуга ↔️ Материалы — КОМПОЗИЦИЯ (рецептура)
+Service "1" *-- "0..*" ServiceMaterial : требует
+ServiceMaterial "1" --> "1" Material : материал
+
+' 8. Мастера ↔️ Услуги — АГРЕГАЦИЯ (навыки BASIC/ADVANCED_MASTER)
+EmployeeProfile "0..*" o-- "0..*" Service : владеет навыком\n(может оказывать)
+
+' 9. Бронирование ↔️ Оплата — АССОЦИАЦИЯ
+Booking "1" --> "0..1" Payment : имеет оплату
+
+' 10. Пользователь ↔️ Отзыв — АССОЦИАЦИЯ (ТЗ 2.2.5)
+User "1" --> "0..*" Review : оставляет отзыв\n(об ИС)
+' ====================== ПРИМЕЧАНИЯ ======================
+note bottom of Booking
+  <b>Валидация по ТЗ и sequence-диаграмме:</b>
+  • durationMinutes ≥ 60 мин
+  • validateNoOverlap() + checkAvailability()
+  • writeOffMaterials() при подтверждении
+end note
+
+note right of Salon
+  <b>PostGIS Point</b>
+  Используется в отчётах 2.2.1–2.2.4
+end note
+
+note left of Review
+  <b>Отзывы об информационной системе</b> (ТЗ 2.2.5)
+end note
+
+note right of EmployeeProfile
+  <b>Ключевой класс для отчёта 2.2.1</b>
+  «Список сотрудников»: ФИО, специализация, салоны занятости, оклад
+end note
+
+@enduml

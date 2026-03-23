@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/repository"
 )
@@ -33,8 +34,7 @@ func (s *EmployeeService) GetMyProfile(userID uint) (*models.EmployeeProfile, er
 
 // HireEmployee — HR создаёт нового сотрудника (ТЗ 2.3.4)
 // Создаёт User + EmployeeProfile за одну операцию
-func (s *EmployeeService) HireEmployee(req models.HireEmployeeRequest) (*models.EmployeeProfile, error) {
-	// Проверить что роль — сотрудник, не клиент
+func (s *EmployeeService) HireEmployee(req dto.HireEmployeeRequest) (*models.EmployeeProfile, error) {
 	if req.Role == models.RoleClient {
 		return nil, errors.New("нельзя нанять пользователя с ролью CLIENT")
 	}

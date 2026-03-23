@@ -6,10 +6,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// ====================== ENUMS ======================
-
+// UserRole хранит прикладную роль пользователя.
+// В физической модели роль вынесена в справочник roles, а в коде оставлена
+// строковым enum, чтобы упростить JWT, RBAC и фильтры в запросах.
 type UserRole string
+
+// BookingStatus хранит жизненный цикл бронирования.
+// В SQL-модели это можно было бы вынести в booking_statuses, но текущая
+// бизнес-логика работает со строковыми статусами напрямую.
 type BookingStatus string
+
+// PaymentStatus хранит статус платёжной операции.
 type PaymentStatus string
 
 const (
@@ -37,9 +44,9 @@ const (
 	PaymentRefunded PaymentStatus = "REFUNDED"
 )
 
-// ====================== СУЩНОСТИ ======================
-
-// User — единая таблица пользователей (7 ролей по ТЗ 2.3)
+// User — базовая учётная запись системы.
+// По смыслу соответствует users из физической модели, но для API ФИО хранится
+// одной строкой, а роль денормализована в строковый enum.
 type User struct {
 	ID           uint           `gorm:"primaryKey"                      json:"id"`
 	Username     string         `gorm:"unique;not null;size:50"          json:"username"`
@@ -58,7 +65,10 @@ type User struct {
 	Reviews          []Review         `gorm:"foreignKey:UserID"    json:"-"`
 }
 
-// EmployeeProfile — профиль сотрудника (отчёт 2.2.1)
+// EmployeeProfile — расширение учётной записи сотрудника.
+// Покрывает идею workers/profiles из физической модели.
+// Участвует в выполнении требования 2.2.1 "Реестр персонала":
+// здесь хранятся специализация, закрепления за салонами и расчётный оклад.
 type EmployeeProfile struct {
 	ID             uint      `gorm:"primaryKey"           json:"id"`
 	UserID         uint      `gorm:"unique;not null"      json:"user_id"`
@@ -73,12 +83,17 @@ type EmployeeProfile struct {
 	Services []Service `gorm:"many2many:employee_services;"    json:"services,omitempty"`
 }
 
-// Salon — салон (PostGIS, отчёты 2.2.2)
+// Salon — филиал сети.
+// Address хранит человекочитаемый адрес, а Location — пространственную точку PostGIS.
+// Геополе переведено на geometry(Point,4326), чтобы модель совпадала с индексацией
+// и геооперациями в PostGIS.
+// Участвует в выполнении требования 2.2.2 "Аналитический отчёт об операционной активности филиалов":
+// здесь лежат идентификатор филиала, адрес и параметры режима работы.
 type Salon struct {
 	ID             uint      `gorm:"primaryKey"                      json:"id"`
 	Name           string    `gorm:"not null;size:100"               json:"name"`
 	Address        string    `gorm:"not null"                        json:"address"`
-	Location       *string   `gorm:"type:geography(POINT,4326)"      json:"location,omitempty"` // PostGIS, опционально
+	Location       *string   `gorm:"type:geometry(POINT,4326)"      json:"location,omitempty"` // PostGIS, опционально
 	WorkingHours   *string   `gorm:"type:jsonb"                      json:"working_hours,omitempty"`
 	Status         string    `gorm:"default:'OPEN'"                  json:"status"` // OPEN/CLOSED
 	MaxStaff       int       `                                       json:"max_staff"`
@@ -91,7 +106,9 @@ type Salon struct {
 	Employees []EmployeeProfile `gorm:"many2many:employee_salons;" json:"employees,omitempty"`
 }
 
-// Service — услуга (длительность ≥ 60 мин по ТЗ)
+// Service — услуга салона.
+// Используется и как прайс-лист, и как источник данных для отчёта 2.2.3
+// "Статистика востребованности услуг".
 type Service struct {
 	ID              uint      `gorm:"primaryKey"              json:"id"`
 	Name            string    `gorm:"not null;unique;size:100" json:"name"`
@@ -106,7 +123,7 @@ type Service struct {
 	Employees []EmployeeProfile `gorm:"many2many:employee_services;" json:"employees,omitempty"`
 }
 
-// Material — расходный материал
+// Material — расходный материал со справочной единицей измерения.
 type Material struct {
 	ID   uint   `gorm:"primaryKey"       json:"id"`
 	Name string `gorm:"not null;unique"  json:"name"`
@@ -116,7 +133,8 @@ type Material struct {
 	Inventories []Inventory       `gorm:"foreignKey:MaterialID" json:"-"`
 }
 
-// ServiceMaterial — норма расхода материала на услугу
+// ServiceMaterial — норма расхода материала на одну услугу.
+// По смыслу соответствует service_consumption из физической модели.
 type ServiceMaterial struct {
 	ServiceID      uint    `gorm:"primaryKey" json:"service_id"`
 	MaterialID     uint    `gorm:"primaryKey" json:"material_id"`
@@ -126,19 +144,25 @@ type ServiceMaterial struct {
 	Material Material `json:"material,omitempty"`
 }
 
-// Inventory — складской запас в салоне
+// Inventory — остаток материала в конкретном салоне.
+// По смыслу соответствует supplies из физической модели.
+// Участвует в требовании 2.2.6 "Ведомость движения ТМЦ":
+// хранит фактический остаток материала в филиале.
 type Inventory struct {
-	ID          uint      `gorm:"primaryKey"  json:"id"`
-	SalonID     uint      `gorm:"not null"    json:"salon_id"`
-	MaterialID  uint      `gorm:"not null"    json:"material_id"`
-	Quantity    float64   `gorm:"not null"    json:"quantity"`
+	ID          uint      `gorm:"primaryKey"     json:"id"`
+	SalonID     uint      `gorm:"not null"       json:"salon_id"`
+	MaterialID  uint      `gorm:"not null"       json:"material_id"`
+	Quantity    float64   `gorm:"not null"       json:"quantity"`
 	LastUpdated time.Time `gorm:"autoUpdateTime" json:"last_updated"`
 
 	Salon    Salon    `json:"salon,omitempty"`
 	Material Material `json:"material,omitempty"`
 }
 
-// Booking — бронирование (ключевая сущность для отчётов 2.2.2–2.2.4)
+// Booking — запись клиента на набор услуг.
+// Нужна для отчётов по загрузке салонов, мастеров и лояльности клиентов.
+// Уже сейчас участвует минимум в требованиях 2.2.2, 2.2.4, 2.2.7 и 2.2.8,
+// потому что связывает клиента, мастера, салон, время визита и итоговую стоимость.
 type Booking struct {
 	ID              uint          `gorm:"primaryKey"                              json:"id"`
 	StartTime       time.Time     `gorm:"not null;index:idx_booking_time"         json:"start_time"`
@@ -159,7 +183,8 @@ type Booking struct {
 	Payment *Payment      `gorm:"foreignKey:BookingID" json:"payment,omitempty"`
 }
 
-// BookingItem — позиция бронирования (одна услуга)
+// BookingItem — конкретная услуга внутри бронирования.
+// По смыслу соответствует booking_service, но хранит снимок цены на момент заказа.
 type BookingItem struct {
 	ID             uint    `gorm:"primaryKey"                      json:"id"`
 	BookingID      uint    `gorm:"not null"                        json:"booking_id"`
@@ -171,7 +196,9 @@ type BookingItem struct {
 	Service Service `json:"service,omitempty"`
 }
 
-// Payment — оплата бронирования
+// Payment — платёж по бронированию.
+// В физической модели статус платежа мог бы жить в transaction_statuses,
+// но текущей прикладной логике удобнее строковый enum.
 type Payment struct {
 	ID                    uint          `gorm:"primaryKey"                  json:"id"`
 	BookingID             uint          `gorm:"unique"                      json:"booking_id"`
@@ -184,7 +211,10 @@ type Payment struct {
 	Booking Booking `json:"-"`
 }
 
-// Review — отзыв об информационной системе (ТЗ 2.2.5)
+// Review — отзыв пользователя о работе системы или качестве обслуживания.
+// В физической модели feedback/evaluations разбивались на две таблицы; здесь для API
+// удобнее хранить текст и числовую оценку в одной сущности.
+// Используется для требования 2.2.5 "Журнал мониторинга качества обслуживания и обратной связи".
 type Review struct {
 	ID        uint      `gorm:"primaryKey"                    json:"id"`
 	UserID    uint      `gorm:"not null"                      json:"user_id"`
@@ -193,69 +223,4 @@ type Review struct {
 	CreatedAt time.Time `                                     json:"created_at"`
 
 	User User `json:"user,omitempty"`
-}
-
-// ====================== DTO (запросы/ответы) ======================
-
-type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
-
-type LoginResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
-}
-
-type RegisterRequest struct {
-	Username string   `json:"username" binding:"required,min=3,max=50"`
-	Password string   `json:"password" binding:"required,min=6"`
-	FullName string   `json:"full_name" binding:"required"`
-	Phone    string   `json:"phone"`
-	Email    string   `json:"email" binding:"omitempty,email"`
-	Role     UserRole `json:"role"`
-}
-
-type CreateBookingRequest struct {
-	StartTime  string `json:"start_time" binding:"required"` // RFC3339
-	SalonID    uint   `json:"salon_id"   binding:"required"`
-	MasterID   *uint  `json:"master_id"`
-	ServiceIDs []uint `json:"service_ids" binding:"required,min=1"`
-	Notes      string `json:"notes"`
-}
-
-type CreateReviewRequest struct {
-	Text   string `json:"text"   binding:"required"`
-	Rating int    `json:"rating" binding:"required,min=1,max=5"`
-}
-
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Code    int    `json:"code"`
-	Message string `json:"message,omitempty"`
-}
-
-// HireEmployeeRequest — HR нанимает нового сотрудника (ТЗ 2.3.4)
-type HireEmployeeRequest struct {
-	// Данные учётной записи
-	Username string   `json:"username"  binding:"required,min=3,max=50"`
-	Password string   `json:"password"  binding:"required,min=6"`
-	FullName string   `json:"full_name" binding:"required"`
-	Phone    string   `json:"phone"`
-	Email    string   `json:"email"     binding:"omitempty,email"`
-	Role     UserRole `json:"role"      binding:"required"`
-
-	// Данные профиля сотрудника
-	Specialization string  `json:"specialization"`
-	ExpectedSalary float64 `json:"expected_salary"`
-	WorkSchedule   string  `json:"work_schedule"` // пустая строка → NULL в jsonb
-	SalonID        uint    `json:"salon_id"`      // опционально — сразу прикрепить к салону
-
-	// Заполняется в хэндлере перед передачей в сервис (не из JSON)
-	PasswordHash string `json:"-"`
-}
-
-// UpdateScheduleRequest — запрос на изменение расписания мастера (ТЗ 2.3.2)
-type UpdateScheduleRequest struct {
-	Schedule string `json:"schedule" binding:"required"`
 }

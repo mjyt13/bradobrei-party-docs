@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func AuthRequired(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error: "unauthorized", Code: 401, Message: "Отсутствует токен авторизации",
 			})
 			return
@@ -38,7 +39,7 @@ func AuthRequired(jwtSecret string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error: "unauthorized", Code: 401, Message: "Недействительный токен",
 			})
 			return
@@ -59,14 +60,14 @@ func RequireRoles(roles ...models.UserRole) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, ok := c.MustGet(UserContextKey).(*Claims)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error: "unauthorized", Code: 401,
 			})
 			return
 		}
 
 		if !allowed[claims.Role] {
-			c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponse{
+			c.AbortWithStatusJSON(http.StatusForbidden, dto.ErrorResponse{
 				Error: "forbidden", Code: 403, Message: "Недостаточно прав для данного действия",
 			})
 			return

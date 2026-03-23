@@ -1,0 +1,85 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam monochrome true
+
+entity "users (Пользователи)" as users {
+  * id : BIGSERIAL <<PK>>
+  --
+  * username : VARCHAR(50) <<Unique>>
+  * password_hash : VARCHAR(255)
+  * full_name : VARCHAR(100)
+  * role : user_role_enum
+  * created_at : TIMESTAMP
+}
+
+entity "employee_profiles (Профили сотрудников)" as employees {
+  * user_id : BIGINT <<PK, FK>>
+  --
+  * specialization : VARCHAR(100)
+  * base_salary : DECIMAL(12, 2)
+  * schedule_json : JSONB -- График смен
+  rating : DECIMAL(3, 2)
+}
+
+entity "salons (Салоны)" as salons {
+  * id : SERIAL <<PK>>
+  --
+  * address : TEXT
+  * location : GEOMETRY(POINT, 4326) -- PostGIS
+  * work_hours : VARCHAR(100)
+  * staff_limit : INTEGER
+}
+
+entity "services (Услуги)" as services {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(100)
+  * base_price : DECIMAL(10, 2)
+  * duration : INTERVAL -- Минимум 1 час по ТЗ
+}
+
+entity "bookings (Бронирования)" as bookings {
+  * id : BIGSERIAL <<PK>>
+  --
+  * client_id : BIGINT <<FK>>
+  * master_id : BIGINT <<FK>>
+  * salon_id : INTEGER <<FK>>
+  * start_time : TIMESTAMP
+  * end_time : TIMESTAMP
+  * status : booking_status_enum
+  * total_price : DECIMAL(10, 2)
+}
+
+entity "materials (Материалы/Ресурсы)" as materials {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(100)
+  * unit : VARCHAR(20) -- мл, шт, г
+}
+
+entity "salon_inventory (Склад в салонах)" as inventory {
+  * salon_id : INTEGER <<PK, FK>>
+  * material_id : INTEGER <<PK, FK>>
+  --
+  * quantity : DECIMAL(12, 3)
+}
+
+entity "service_consumptions (Нормы расхода)" as norms {
+  * service_id : INTEGER <<PK, FK>>
+  * material_id : INTEGER <<PK, FK>>
+  --
+  * amount_per_service : DECIMAL(12, 3)
+}
+
+' Связи
+users ||--o| employees : "1:1"
+salons ||--o{ bookings : "1:N"
+users ||--o{ bookings : "client/master 1:N"
+services ||--o{ bookings : "через таблицу связей (опц)"
+salons ||--o{ inventory : "склад"
+materials ||--o{ inventory : "номенклатура"
+services ||--o{ norms : "рецептура"
+materials ||--o{ norms : "ресурсы"
+
+@enduml

@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/middleware"
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/repository"
@@ -21,7 +22,7 @@ func NewAuthService(userRepo *repository.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) Register(req models.RegisterRequest) (*models.User, error) {
+func (s *AuthService) Register(req dto.RegisterRequest) (*models.User, error) {
 	// Роль по умолчанию — CLIENT
 	role := req.Role
 	if role == "" {
@@ -33,7 +34,7 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.User, error)
 		return nil, err
 	}
 
-	// Email — указатель: пустая строка → NULL, не нарушает unique constraint
+// Email — указатель: пустая строка → NULL, не нарушает unique constraint	
 	var emailPtr *string
 	if req.Email != "" {
 		emailPtr = &req.Email
@@ -54,7 +55,7 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.User, error)
 	return user, nil
 }
 
-func (s *AuthService) Login(req models.LoginRequest) (*models.LoginResponse, error) {
+func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	user, err := s.userRepo.GetByUsername(req.Username)
 	if err != nil {
 		return nil, errors.New("неверный логин или пароль")
@@ -69,7 +70,7 @@ func (s *AuthService) Login(req models.LoginRequest) (*models.LoginResponse, err
 		return nil, err
 	}
 
-	return &models.LoginResponse{Token: token, User: *user}, nil
+	return &dto.LoginResponse{Token: token, User: *user}, nil
 }
 
 func (s *AuthService) generateToken(user *models.User) (string, error) {

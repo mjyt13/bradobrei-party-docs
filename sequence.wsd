@@ -1,0 +1,59 @@
+@startuml sequence
+skinparam Style strictuml
+autonumber
+
+actor "Клиент" as User
+participant "Web App (SPA)" as Web
+participant "Security Controller" as Auth
+participant "Booking Controller" as BookCtrl
+participant "Booking Service" as BookSvc
+participant "Inventory Service" as InvSvc
+participant "Data Repository" as Repo
+database "PostgreSQL" as DB
+participant "Сервис уведомлений" as Notifier
+entity "External Mail API" as MailExt
+
+User -> Web: Нажимает "Забронировать"
+Web -> Auth: POST /api/bookings (с токеном)
+activate Auth
+Auth -> BookCtrl: Передает запрос
+deactivate Auth
+
+activate BookCtrl
+BookCtrl -> BookSvc: createBooking(data)
+activate BookSvc
+
+group Транзакция: Бронирование и Склад
+    BookSvc -> InvSvc: deductResources(serviceId)
+    activate InvSvc
+    InvSvc -> Repo: findMaterialsByService(id)
+    Repo --> InvSvc: список (шампунь, масло)
+    InvSvc -> Repo: updateStock(materials)
+    activate Repo
+    Repo -> DB: UPDATE stocks...
+    DB --> Repo: stocks
+    deactivate Repo
+    Repo --> InvSvc: success
+    deactivate InvSvc
+
+    BookSvc -> Repo: saveNewBooking(booking)
+    activate Repo
+    Repo -> DB: INSERT INTO bookings...
+    DB --> Repo: booking
+    Repo --> BookSvc: booking
+    deactivate Repo
+end
+
+BookSvc -> Notifier: sendConfirmation(clientId, bookingDetails)
+activate Notifier
+Notifier -> MailExt: POST /send (E-mail/SMS)
+MailExt --> User: "Запись создана"
+MailExt --> Notifier: 200 OK
+deactivate Notifier
+
+BookSvc --> BookCtrl: Успех (BookingDTO)
+deactivate BookSvc
+BookCtrl --> Web: HTTP 201 Created
+deactivate BookCtrl
+Web --> User: Подтверждение "Вы записаны!"
+@enduml

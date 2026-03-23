@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/services"
 
@@ -22,7 +23,7 @@ func NewMaterialHandler(materialService *services.MaterialService) *MaterialHand
 func (h *MaterialHandler) GetAll(c *gin.Context) {
 	list, err := h.materialService.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -32,12 +33,12 @@ func (h *MaterialHandler) GetAll(c *gin.Context) {
 func (h *MaterialHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 	m, err := h.materialService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error: "not_found", Code: 404, Message: "Материал не найден",
 		})
 		return
@@ -49,13 +50,13 @@ func (h *MaterialHandler) GetByID(c *gin.Context) {
 func (h *MaterialHandler) Create(c *gin.Context) {
 	var m models.Material
 	if err := c.ShouldBindJSON(&m); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 	if err := h.materialService.Create(&m); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusCreated, m)
@@ -65,25 +66,25 @@ func (h *MaterialHandler) Create(c *gin.Context) {
 func (h *MaterialHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 	existing, err := h.materialService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error: "not_found", Code: 404, Message: "Материал не найден",
 		})
 		return
 	}
 	if err := c.ShouldBindJSON(existing); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 	existing.ID = uint(id)
 	if err := h.materialService.Update(existing); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, existing)
@@ -93,11 +94,11 @@ func (h *MaterialHandler) Update(c *gin.Context) {
 func (h *MaterialHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 	if err := h.materialService.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Материал удалён"})
@@ -109,20 +110,20 @@ func (h *MaterialHandler) Delete(c *gin.Context) {
 func (h *MaterialHandler) SetServiceMaterials(c *gin.Context) {
 	serviceID, err := strconv.ParseUint(c.Param("serviceId"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 
 	var items []models.ServiceMaterial
 	if err := c.ShouldBindJSON(&items); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
 	}
 
 	if err := h.materialService.SetServiceMaterials(uint(serviceID), items); err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Норма расхода обновлена"})

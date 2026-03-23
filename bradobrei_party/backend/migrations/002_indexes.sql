@@ -6,6 +6,6 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_booking_items_booking_id ON booking_items(booking_id);
 CREATE INDEX IF NOT EXISTS idx_booking_items_service_id ON booking_items(service_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_salon_material ON inventories(salon_id, material_id);
-CREATE INDEX IF NOT EXISTS idx_salons_location ON salons USING GIST(location::geometry);
+CREATE INDEX IF NOT EXISTS idx_salons_location ON salons USING GIST(location);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);

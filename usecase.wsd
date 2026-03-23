@@ -1,0 +1,61 @@
+@startuml bradobrei-usecase
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Клиент" as Client
+actor "Сотрудник" as Staff
+actor "Мастер" as Master
+actor "Персонал" as Office
+actor "Администратор" as Admin
+
+' Группировка акторов слева
+Staff <|-- Master
+Staff <|-- Office
+Staff <|-- Admin
+
+rectangle "Брадобрей-пати" {  
+  (Просмотр каталога) as View
+  (Запись на услугу) as Book
+  (Оставить отзыв) as Feedback
+  (Оплата услуги) as Pay
+  
+  (Управление графиком) as Schedule
+  (Подтверждение записи) as Confirm
+  (Списание материалов) as Inventory
+  
+  (Генерация отчетов) as Reports
+  (Управление персоналом) as HR
+  
+  (Полное управление ИС) as FullAccess
+  (Настройка ролей) as Roles
+}
+
+' Объявляем Auth ПОСЛЕ прямоугольника
+(Авторизация в системе) as Auth
+
+' Связи акторов
+Client -- View
+Client -- Book
+Client -- Feedback
+Client -- Pay
+
+Master -- Schedule
+Master -- Confirm
+Master -- Inventory
+
+Office -- Reports
+Office -- HR
+
+Admin -- FullAccess
+Admin -- Roles
+
+' Магия позиционирования: используем -[hidden]- 
+' Это заставит Auth встать правее самого правого элемента в блоке
+Reports -[hidden]right-> Auth
+Roles -[hidden]right-> Auth
+
+' Реальные связи
+Book .> Auth : <<include>>
+Reports .> Auth : <<include>>
+
+@enduml

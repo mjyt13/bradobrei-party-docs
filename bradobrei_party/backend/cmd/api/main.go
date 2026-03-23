@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	docs "bradobrei/backend/docs"
 	"bradobrei/backend/internal/handlers"
 	"bradobrei/backend/internal/middleware"
 	"bradobrei/backend/internal/models"
@@ -19,24 +20,29 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
+// @title Bradobrei Party API
+// @version 1.0
+// @description Backend API для системы управления сетью барбершопов Bradobrei Party.
+// @BasePath /api/v1
+// @schemes http
 func main() {
-	// 1. Загрузка .env
 	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️  .env не найден")
+		log.Println(".env не найден")
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		log.Fatal("❌ JWT_SECRET не задан")
+		log.Fatal("JWT_SECRET не задан")
 	}
 
-	// 2. Подключение к PostgreSQL
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s search_path=public",
 		os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"), os.Getenv("DB_PORT"), os.Getenv("DB_SSLMODE"),
 	)
@@ -45,21 +51,30 @@ func main() {
 		Logger:      logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
-		log.Fatal("❌ Ошибка подключения к БД:", err)
+		log.Fatal("Ошибка подключения к БД:", err)
 	}
 
-	// 3. Авто-миграция всех 11 таблиц
+	// Для пустой БД или вручную пересозданной базы гарантируем наличие рабочей схемы.
+	if err := db.Exec("CREATE SCHEMA IF NOT EXISTS public").Error; err != nil {
+		log.Fatal("Ошибка подготовки схемы public:", err)
+	}
+
+	// Для геополей salons.location требуется расширение PostGIS.
+	// Если БД создана вручную, его может не быть даже при наличии схемы public.
+	if err := db.Exec("CREATE EXTENSION IF NOT EXISTS postgis").Error; err != nil {
+		log.Fatal("Ошибка подключения расширения postgis:", err)
+	}
+
 	if err := db.AutoMigrate(
 		&models.User{}, &models.EmployeeProfile{}, &models.Salon{},
 		&models.Service{}, &models.Material{}, &models.ServiceMaterial{},
 		&models.Inventory{}, &models.Booking{}, &models.BookingItem{},
 		&models.Payment{}, &models.Review{},
 	); err != nil {
-		log.Fatal("❌ Ошибка миграции:", err)
+		log.Fatal("Ошибка миграции:", err)
 	}
-	log.Println("✅ БД синхронизирована (11 таблиц)")
+	log.Println("БД синхронизирована")
 
-	// 4. Репозитории
 	userRepo := repository.NewUserRepository(db)
 	bookingRepo := repository.NewBookingRepository(db)
 	salonRepo := repository.NewSalonRepository(db)
@@ -69,7 +84,6 @@ func main() {
 	materialRepo := repository.NewMaterialRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
 
-	// 5. Сервисы
 	authSvc := services.NewAuthService(userRepo)
 	bookingSvc := services.NewBookingService(bookingRepo, invRepo, db)
 	salonSvc := services.NewSalonService(salonRepo)
@@ -78,7 +92,6 @@ func main() {
 	materialSvc := services.NewMaterialService(materialRepo)
 	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo)
 
-	// 6. Хэндлеры
 	authH := handlers.NewAuthHandler(authSvc)
 	bookingH := handlers.NewBookingHandler(bookingSvc)
 	salonH := handlers.NewSalonHandler(salonSvc)
@@ -88,11 +101,11 @@ func main() {
 	materialH := handlers.NewMaterialHandler(materialSvc)
 	employeeH := handlers.NewEmployeeHandler(employeeSvc)
 
-	// 7. Роутер
 	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.New()
+	r.Use(middleware.RequestLogger())
 	r.Use(middleware.RecoveryWithLog())
 	r.Use(middleware.ErrorLogger())
 	r.Use(cors.New(cors.Config{
@@ -105,21 +118,25 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "alive", "version": "1.0", "db": "connected"})
 	})
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
+	r.GET("/docs/*any", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
 
 	v1 := r.Group("/api/v1")
 
-	// Публичные маршруты
 	auth := v1.Group("/auth")
 	{
 		auth.POST("/register", authH.Register)
 		auth.POST("/login", authH.Login)
 	}
 
-	// Защищённые маршруты (JWT обязателен)
 	api := v1.Group("/")
 	api.Use(middleware.AuthRequired(jwtSecret))
 	{
-		// Салоны
 		salons := api.Group("/salons")
 		{
 			salons.GET("", salonH.GetAll)
@@ -130,7 +147,6 @@ func main() {
 			salons.DELETE("/:id", middleware.RequireRoles(models.RoleAdmin), salonH.Delete)
 		}
 
-		// Услуги
 		svcs := api.Group("/services")
 		{
 			svcs.GET("", serviceH.GetAll)
@@ -147,7 +163,6 @@ func main() {
 				serviceH.RemoveFromMaster)
 		}
 
-		// Материалы
 		mats := api.Group("/materials")
 		mats.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleAdvancedMaster, models.RoleAccountant))
 		{
@@ -161,7 +176,6 @@ func main() {
 				materialH.SetServiceMaterials)
 		}
 
-		// Сотрудники
 		emps := api.Group("/employees")
 		{
 			emps.GET("", middleware.RequireRoles(models.RoleAdmin, models.RoleHR, models.RoleNetworkManager), employeeH.GetAll)
@@ -176,7 +190,6 @@ func main() {
 			emps.DELETE("/:id/assign-salon/:salonId", middleware.RequireRoles(models.RoleAdmin, models.RoleNetworkManager), employeeH.RemoveFromSalon)
 		}
 
-		// Бронирования
 		bookings := api.Group("/bookings")
 		{
 			bookings.POST("", middleware.RequireRoles(models.RoleClient, models.RoleAdmin), bookingH.Create)
@@ -187,14 +200,12 @@ func main() {
 			bookings.POST("/:id/cancel", bookingH.Cancel)
 		}
 
-		// Отзывы
 		reviews := api.Group("/reviews")
 		{
 			reviews.POST("", reviewH.Create)
 			reviews.GET("", middleware.RequireRoles(models.RoleAdmin), reviewH.GetAll)
 		}
 
-		// Отчёты (ТЗ 2.2)
 		reports := api.Group("/reports")
 		reports.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager, models.RoleHR))
 		{
@@ -206,11 +217,13 @@ func main() {
 		}
 	}
 
-	// 8. Запуск сервера
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
+	docs.SwaggerInfo.Host = "localhost:" + port
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      r,
@@ -218,18 +231,17 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 	go func() {
-		log.Printf("🚀 Сервер запущен на http://localhost:%s", port)
+		log.Printf("Сервер запущен на http://localhost:%s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("❌ %v", err)
+			log.Fatalf("%v", err)
 		}
 	}()
 
-	// 9. Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-	log.Println("✅ Сервер остановлен")
+	log.Println("Сервер остановлен")
 }

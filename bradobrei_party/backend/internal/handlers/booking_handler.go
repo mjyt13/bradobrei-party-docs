@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"bradobrei/backend/internal/dto"
 	"bradobrei/backend/internal/middleware"
-	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -19,13 +19,23 @@ func NewBookingHandler(bookingService *services.BookingService) *BookingHandler 
 	return &BookingHandler{bookingService: bookingService}
 }
 
-// POST /api/v1/bookings
+// Create godoc
+// @Summary Создать бронирование
+// @Description Основа пользовательского сценария записи клиента. Используется в отчётах 2.2.2, 2.2.4, 2.2.7 и 2.2.8.
+// @Tags bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreateBookingRequest true "Данные бронирования"
+// @Success 201 {object} models.Booking
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /bookings [post]
 func (h *BookingHandler) Create(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 
-	var req models.CreateBookingRequest
+	var req dto.CreateBookingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "bad_request", Code: 400, Message: err.Error(),
 		})
 		return
@@ -33,7 +43,7 @@ func (h *BookingHandler) Create(c *gin.Context) {
 
 	booking, err := h.bookingService.Create(req, claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "booking_failed", Code: 400, Message: err.Error(),
 		})
 		return
@@ -46,13 +56,13 @@ func (h *BookingHandler) Create(c *gin.Context) {
 func (h *BookingHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 
 	booking, err := h.bookingService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error: "not_found", Code: 404, Message: "Бронирование не найдено",
 		})
 		return
@@ -67,7 +77,7 @@ func (h *BookingHandler) GetMy(c *gin.Context) {
 
 	bookings, err := h.bookingService.GetByClient(claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 
@@ -75,12 +85,14 @@ func (h *BookingHandler) GetMy(c *gin.Context) {
 }
 
 // GET /api/v1/bookings/master
+// Рабочий эндпоинт мастера для просмотра назначенных записей;
+// напрямую связан с данными для требования 2.2.4.
 func (h *BookingHandler) GetByMaster(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 
 	bookings, err := h.bookingService.GetByMaster(claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
 		return
 	}
 
@@ -92,13 +104,13 @@ func (h *BookingHandler) Confirm(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 
 	booking, err := h.bookingService.Confirm(uint(id), claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "confirm_failed", Code: 400, Message: err.Error(),
 		})
 		return
@@ -112,12 +124,12 @@ func (h *BookingHandler) Cancel(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "bad_request", Code: 400})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
 		return
 	}
 
 	if err := h.bookingService.Cancel(uint(id), claims.UserID, claims.Role); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error: "cancel_failed", Code: 400, Message: err.Error(),
 		})
 		return
