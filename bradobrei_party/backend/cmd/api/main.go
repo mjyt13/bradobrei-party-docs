@@ -195,6 +195,9 @@ func main() {
 				models.RoleAccountant, models.RoleNetworkManager, models.RoleAdmin,
 			), employeeH.GetMe)
 			emps.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleHR), employeeH.Hire)
+			emps.PUT("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleHR), employeeH.Update)
+			emps.PATCH("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleHR), employeeH.Patch)
+			emps.DELETE("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleHR), employeeH.Fire)
 			emps.PATCH("/me/schedule", middleware.RequireRoles(models.RoleBasicMaster, models.RoleAdvancedMaster), employeeH.UpdateMySchedule)
 			emps.POST("/:id/assign-salon", middleware.RequireRoles(models.RoleAdmin, models.RoleNetworkManager), employeeH.AssignToSalon)
 			emps.DELETE("/:id/assign-salon/:salonId", middleware.RequireRoles(models.RoleAdmin, models.RoleNetworkManager), employeeH.RemoveFromSalon)

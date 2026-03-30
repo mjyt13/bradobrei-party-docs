@@ -2,7 +2,6 @@ package dto
 
 import "bradobrei/backend/internal/models"
 
-// ErrorResponse — единый формат ошибок HTTP API.
 type ErrorResponse struct {
 	Error   string `json:"error" example:"bad_request"`
 	Code    int    `json:"code" example:"400"`
@@ -65,6 +64,31 @@ type HireEmployeeRequest struct {
 	SalonID        uint    `json:"salon_id" example:"1"`
 
 	PasswordHash string `json:"-"`
+}
+
+type UpdateEmployeeRequest struct {
+	Username string          `json:"username" binding:"required,min=3,max=50" example:"master_ivan"`
+	FullName string          `json:"full_name" binding:"required" example:"Иван Барбер"`
+	Phone    string          `json:"phone" example:"+79990001122"`
+	Email    string          `json:"email" binding:"omitempty,email" example:"ivan.barber@example.com"`
+	Role     models.UserRole `json:"role" binding:"required" example:"ADVANCED_MASTER"`
+
+	Specialization string  `json:"specialization" example:"Fade, beard styling"`
+	ExpectedSalary float64 `json:"expected_salary" example:"85000"`
+	WorkSchedule   string  `json:"work_schedule" example:"{\"mon\":\"10:00-19:00\",\"wed\":\"10:00-19:00\"}"`
+	SalonIDs       []uint  `json:"salon_ids" example:"1,2"`
+}
+
+type PatchEmployeeRequest struct {
+	Username       *string          `json:"username,omitempty" example:"master_ivan"`
+	FullName       *string          `json:"full_name,omitempty" example:"Иван Барбер"`
+	Phone          *string          `json:"phone,omitempty" example:"+79990001122"`
+	Email          *string          `json:"email,omitempty" example:"ivan.barber@example.com"`
+	Role           *models.UserRole `json:"role,omitempty" example:"ADVANCED_MASTER"`
+	Specialization *string          `json:"specialization,omitempty" example:"Fade, beard styling"`
+	ExpectedSalary *float64         `json:"expected_salary,omitempty" example:"85000"`
+	WorkSchedule   *string          `json:"work_schedule,omitempty" example:"{\"mon\":\"10:00-19:00\",\"wed\":\"10:00-19:00\"}"`
+	SalonIDs       *[]uint          `json:"salon_ids,omitempty" example:"1,2"`
 }
 
 type UpdateScheduleRequest struct {

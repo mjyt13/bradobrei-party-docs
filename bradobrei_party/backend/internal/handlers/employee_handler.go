@@ -20,7 +20,6 @@ func NewEmployeeHandler(employeeService *services.EmployeeService) *EmployeeHand
 	return &EmployeeHandler{employeeService: employeeService}
 }
 
-// GET /api/v1/employees  (ADMIN, HR, NETWORK_MANAGER)
 func (h *EmployeeHandler) GetAll(c *gin.Context) {
 	list, err := h.employeeService.GetAll()
 	if err != nil {
@@ -30,7 +29,6 @@ func (h *EmployeeHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-// GET /api/v1/employees/:id  (ADMIN, HR, NETWORK_MANAGER)
 func (h *EmployeeHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -47,7 +45,6 @@ func (h *EmployeeHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
-// GET /api/v1/employees/me  — свой профиль (любой сотрудник)
 func (h *EmployeeHandler) GetMe(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 	profile, err := h.employeeService.GetMyProfile(claims.UserID)
@@ -60,8 +57,6 @@ func (h *EmployeeHandler) GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
-// POST /api/v1/employees  — нанять сотрудника (HR, ADMIN)
-// ТЗ 2.3.4: HR создаёт нового сотрудника в системе
 func (h *EmployeeHandler) Hire(c *gin.Context) {
 	var req dto.HireEmployeeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -88,8 +83,75 @@ func (h *EmployeeHandler) Hire(c *gin.Context) {
 	c.JSON(http.StatusCreated, profile)
 }
 
-// PATCH /api/v1/employees/me/schedule  — мастер меняет своё расписание (ТЗ 2.3.2)
-// body: {"schedule": "{\"mon\":\"9-18\",\"tue\":\"9-18\"}"}
+func (h *EmployeeHandler) Update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
+		return
+	}
+
+	var req dto.UpdateEmployeeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "bad_request", Code: 400, Message: err.Error(),
+		})
+		return
+	}
+
+	profile, err := h.employeeService.UpdateEmployee(uint(id), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "update_failed", Code: 400, Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+func (h *EmployeeHandler) Patch(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
+		return
+	}
+
+	var req dto.PatchEmployeeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "bad_request", Code: 400, Message: err.Error(),
+		})
+		return
+	}
+
+	profile, err := h.employeeService.PatchEmployee(uint(id), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "patch_failed", Code: 400, Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+func (h *EmployeeHandler) Fire(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
+		return
+	}
+
+	if err := h.employeeService.FireEmployee(uint(id)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "fire_failed", Code: 400, Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Сотрудник уволен"})
+}
+
 func (h *EmployeeHandler) UpdateMySchedule(c *gin.Context) {
 	claims, _ := middleware.GetCurrentClaims(c)
 
@@ -110,8 +172,6 @@ func (h *EmployeeHandler) UpdateMySchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Расписание обновлено"})
 }
 
-// POST /api/v1/employees/:id/assign-salon  (ADMIN, NETWORK_MANAGER)
-// body: {"salon_id": 2}
 func (h *EmployeeHandler) AssignToSalon(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -128,13 +188,14 @@ func (h *EmployeeHandler) AssignToSalon(c *gin.Context) {
 	}
 
 	if err := h.employeeService.AssignToSalon(uint(id), req.SalonID); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "assign_failed", Code: 400, Message: err.Error(),
+		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Сотрудник прикреплён к салону"})
 }
 
-// DELETE /api/v1/employees/:id/assign-salon/:salonId  (ADMIN, NETWORK_MANAGER)
 func (h *EmployeeHandler) RemoveFromSalon(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	salonID, _ := strconv.ParseUint(c.Param("salonId"), 10, 64)

@@ -117,7 +117,11 @@ func (h *SalonHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.salonService.Create(&salon); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "validation_error",
+			Code:    400,
+			Message: err.Error(),
+		})
 		return
 	}
 	c.JSON(http.StatusCreated, salon)
@@ -164,7 +168,11 @@ func (h *SalonHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.salonService.Update(existing); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal", Code: 500})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "validation_error",
+			Code:    400,
+			Message: err.Error(),
+		})
 		return
 	}
 	c.JSON(http.StatusOK, existing)
