@@ -36,9 +36,12 @@ func ExtractToken(authHeader string) (string, bool) {
 		return "", false
 	}
 
-	if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
-		token := strings.TrimSpace(authHeader[len("Bearer "):])
-		return token, token != ""
+	parts := strings.Fields(authHeader)
+	if len(parts) >= 1 && strings.EqualFold(parts[0], "bearer") {
+		if len(parts) != 2 {
+			return "", false
+		}
+		return parts[1], parts[1] != ""
 	}
 
 	return authHeader, true
