@@ -1,0 +1,95 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "username": "admin",
+      "full_name": "Admin Admin",
+      "phone": "+79991234567",
+      "email": "admin@example.com",
+      "role": "ADMIN",
+      "created_at": "2026-03-29T14:43:53.303066+05:00",
+      "updated_at": "2026-03-29T14:43:53.303066+05:00"
+    },
+    {
+      "id": 3,
+      "username": "counter",
+      "full_name": "Родионов Андрей",
+      "phone": "+78882255666",
+      "email": "counter.x@a.aa",
+      "role": "ACCOUNTANT",
+      "created_at": "2026-03-30T13:45:24.081081+05:00",
+      "updated_at": "2026-03-30T13:45:24.081081+05:00",
+      "employee_profile": {
+        "id": 1,
+        "user_id": 3,
+        "specialization": "Подсчёт",
+        "expected_salary": 45000,
+        "work_schedule": "{\"mon\": \"10:00-19:00\", \"wed\": \"10:00-19:00\"}",
+        "created_at": "2026-03-30T13:45:24.09133+05:00",
+        "updated_at": "2026-03-30T13:45:24.09133+05:00",
+        "user": {
+          "id": 0,
+          "username": "",
+          "full_name": "",
+          "phone": "",
+          "role": "",
+          "created_at": "0001-01-01T00:00:00Z",
+          "updated_at": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "username": "admin_smoke_1775364137",
+      "full_name": "Smoke Admin",
+      "phone": "+79990000001",
+      "email": "admin_smoke_1775364137@example.com",
+      "role": "ADMINISTRATOR",
+      "created_at": "2026-04-05T09:42:17.421371+05:00",
+      "updated_at": "2026-04-05T09:42:17.421371+05:00"
+    },
+    {
+      "id": 11,
+      "username": "worker_smoke_1775367118",
+      "full_name": "Smoke Worker",
+      "phone": "+79990000002",
+      "email": "worker_smoke_1775367118@example.com",
+      "role": "ADVANCED_MASTER",
+      "created_at": "2026-04-05T10:31:59.93693+05:00",
+      "updated_at": "2026-04-05T10:31:59.93693+05:00",
+      "employee_profile": {
+        "id": 2,
+        "user_id": 11,
+        "specialization": "Fade",
+        "expected_salary": 85000,
+        "work_schedule": "{\"mon\": \"10:00-19:00\"}",
+        "created_at": "2026-04-05T10:31:59.942057+05:00",
+        "updated_at": "2026-04-05T10:31:59.942057+05:00",
+        "user": {
+          "id": 0,
+          "username": "",
+          "full_name": "",
+          "phone": "",
+          "role": "",
+          "created_at": "0001-01-01T00:00:00Z",
+          "updated_at": "0001-01-01T00:00:00Z"
+        },
+        "salons": [
+          {
+            "id": 3,
+            "name": "Smoke Salon 1775367118",
+            "address": "�����, �������� 1",
+            "location": "0101000020E6100000068195438B1C4C40D26F5F07CE014D40",
+            "working_hours": "{\"mon\": \"10:00-20:00\", \"tue\": \"10:00-20:00\"}",
+            "status": "OPEN",
+            "max_staff": 10,
+            "base_hourly_rate": 1500,
+            "created_at": "2026-04-05T10:31:58.674737+05:00",
+            "updated_at": "2026-04-05T10:31:58.674737+05:00"
+          }
+        ]
+      }
+    }
+  ],
+  "report": "employee_list"
+}

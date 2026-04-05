@@ -223,7 +223,7 @@ func newTestApp(t *testing.T) *testApp {
 	if err := db.AutoMigrate(
 		&models.User{}, &models.EmployeeProfile{}, &models.Salon{},
 		&models.Service{}, &models.Material{}, &models.ServiceMaterial{},
-		&models.Inventory{}, &models.Booking{}, &models.BookingItem{},
+		&models.Inventory{}, &models.MaterialExpense{}, &models.ServiceUsage{}, &models.Booking{}, &models.BookingItem{},
 		&models.Payment{}, &models.Review{},
 	); err != nil {
 		t.Fatalf("failed to migrate schema: %v", err)
@@ -282,6 +282,9 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 	reportSvc := services.NewReportService(reportRepo)
 	employeeSvc := services.NewEmployeeService(employeeRepo, userRepo)
 	paymentSvc := services.NewPaymentService(paymentRepo, bookingRepo)
+	serviceSvc := services.NewServiceService(repository.NewServiceRepository(db), employeeRepo, invRepo, db)
+	materialExpenseSvc := services.NewMaterialExpenseService(db)
+	inventorySvc := services.NewInventoryService(invRepo)
 
 	authH := handlers.NewAuthHandler(authSvc)
 	bookingH := handlers.NewBookingHandler(bookingSvc)
@@ -290,6 +293,9 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 	employeeH := handlers.NewEmployeeHandler(employeeSvc)
 	reviewH := handlers.NewReviewHandler(db)
 	paymentH := handlers.NewPaymentHandler(paymentSvc)
+	serviceH := handlers.NewServiceHandler(serviceSvc)
+	materialExpenseH := handlers.NewMaterialExpenseHandler(materialExpenseSvc)
+	inventoryH := handlers.NewInventoryHandler(inventorySvc)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -354,6 +360,31 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 			payments.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant), paymentH.Create)
 		}
 
+		svcs := api.Group("/services")
+		{
+			svcs.POST("/:id/use", middleware.RequireRoles(models.RoleAdmin, models.RoleAdvancedMaster, models.RoleBasicMaster), serviceH.Use)
+		}
+
+		materialExpenses := api.Group("/material-expenses")
+		materialExpenses.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant))
+		{
+			materialExpenses.GET("", materialExpenseH.GetAll)
+			materialExpenses.GET("/:id", materialExpenseH.GetByID)
+			materialExpenses.POST("", materialExpenseH.Create)
+			materialExpenses.PUT("/:id", materialExpenseH.Update)
+			materialExpenses.DELETE("/:id", materialExpenseH.Delete)
+		}
+
+		inventories := api.Group("/inventories")
+		{
+			inventories.GET("/salon/:salonId",
+				middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager, models.RoleAdvancedMaster),
+				inventoryH.GetBySalon)
+			inventories.PUT("/salon/:salonId/material/:materialId",
+				middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant),
+				inventoryH.SetQuantity)
+		}
+
 		reports := api.Group("/reports")
 		reports.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleAccountant, models.RoleNetworkManager, models.RoleHR))
 		{
@@ -362,6 +393,10 @@ func buildTestRouter(db *gorm.DB) *gin.Engine {
 			reports.GET("/service-popularity", reportH.ServicePopularity)
 			reports.GET("/master-activity", reportH.MasterActivity)
 			reports.GET("/reviews", reportH.Reviews)
+			reports.GET("/inventory-movement", reportH.InventoryMovement)
+			reports.GET("/client-loyalty", reportH.ClientLoyalty)
+			reports.GET("/cancelled-bookings", reportH.CancelledBookings)
+			reports.GET("/financial-summary", reportH.FinancialSummary)
 		}
 	}
 

@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "salon_id": 3,
+      "salon_address": "�����, �������� 1",
+      "material_name": "Smoke Material 1775367118",
+      "unit": "ml",
+      "opening_balance": 0,
+      "purchased": 30,
+      "written_off": 1,
+      "current_balance": 29
+    }
+  ],
+  "period": {
+    "from": "2026-03-29T00:00:00Z",
+    "to": "2026-04-12T00:00:00Z"
+  },
+  "report": "inventory_movement",
+  "salon_id": 3
+}

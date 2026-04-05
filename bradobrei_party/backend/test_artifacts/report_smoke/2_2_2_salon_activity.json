@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "salon_id": 3,
+      "address": "�����, �������� 1",
+      "client_count": 1,
+      "service_count": 1,
+      "total_revenue": 1800
+    },
+    {
+      "salon_id": 1,
+      "address": "Пермь, ул. Монастырская",
+      "client_count": 0,
+      "service_count": 0,
+      "total_revenue": 0
+    },
+    {
+      "salon_id": 2,
+      "address": "???�??????, ???�???,?????�?? 1",
+      "client_count": 0,
+      "service_count": 0,
+      "total_revenue": 0
+    }
+  ],
+  "period": {
+    "from": "2026-03-29T00:00:00Z",
+    "to": "2026-04-12T00:00:00Z"
+  },
+  "report": "salon_activity"
+}

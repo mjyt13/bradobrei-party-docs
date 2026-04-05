@@ -1,0 +1,42 @@
+{
+  "data": [
+    {
+      "salon_id": 3,
+      "salon_address": "�����, �������� 1",
+      "expense_item": "Закупка материала: Smoke Material 1775367118",
+      "amount": 10500,
+      "transaction_date": "2026-04-05T10:31:59.610761+05:00",
+      "total_balance": -10500
+    },
+    {
+      "salon_id": 3,
+      "salon_address": "�����, �������� 1",
+      "expense_item": "Выручка от оплаченных услуг",
+      "amount": 1800,
+      "transaction_date": "2026-04-05T10:32:02.357849+05:00",
+      "total_balance": -10500
+    },
+    {
+      "salon_id": 3,
+      "salon_address": "�����, �������� 1",
+      "expense_item": "Возврат клиенту",
+      "amount": 1800,
+      "transaction_date": "2026-04-05T10:32:02.556484+05:00",
+      "total_balance": -10500
+    },
+    {
+      "salon_id": 3,
+      "salon_address": "�����, �������� 1",
+      "expense_item": "Ожидаемое поступление",
+      "amount": 1800,
+      "transaction_date": "2026-04-05T10:32:02.73959+05:00",
+      "total_balance": -10500
+    }
+  ],
+  "period": {
+    "from": "2026-03-29T00:00:00Z",
+    "to": "2026-04-12T00:00:00Z"
+  },
+  "report": "financial_summary",
+  "salon_id": 3
+}

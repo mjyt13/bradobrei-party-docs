@@ -50,6 +50,20 @@ type CreatePaymentRequest struct {
 	ExternalTransactionID string               `json:"external_transaction_id" example:"txn_local_12345"`
 }
 
+type CreateServiceRequest struct {
+	Name            string  `json:"name" binding:"required" example:"Мужская стрижка"`
+	Description     string  `json:"description" example:"Стрижка с оформлением висков и затылка"`
+	Price           float64 `json:"price" binding:"required,gt=0" example:"1800"`
+	DurationMinutes int     `json:"duration_minutes" binding:"required,min=1" example:"75"`
+}
+
+type UpdateServiceRequest struct {
+	Name            string  `json:"name" binding:"required" example:"Мужская стрижка"`
+	Description     string  `json:"description" example:"Стрижка с оформлением висков и затылка"`
+	Price           float64 `json:"price" binding:"required,gt=0" example:"1900"`
+	DurationMinutes int     `json:"duration_minutes" binding:"required,min=1" example:"90"`
+}
+
 type HireEmployeeRequest struct {
 	Username string          `json:"username" binding:"required,min=3,max=50" example:"master_ivan"`
 	Password string          `json:"password" binding:"required,min=6" example:"password"`
@@ -101,4 +115,27 @@ type AssignSalonRequest struct {
 
 type AssignServiceToMasterRequest struct {
 	TargetUserID uint `json:"target_user_id" binding:"required" example:"12"`
+}
+
+type CreateMaterialExpenseRequest struct {
+	MaterialID    uint    `json:"material_id" binding:"required" example:"1"`
+	SalonID       uint    `json:"salon_id" binding:"required" example:"1"`
+	PurchasePrice float64 `json:"purchase_price" binding:"required,gt=0" example:"350"`
+	Quantity      float64 `json:"quantity" binding:"required,gt=0" example:"10"`
+}
+
+type UpdateMaterialExpenseRequest struct {
+	MaterialID    uint    `json:"material_id" binding:"required" example:"1"`
+	SalonID       uint    `json:"salon_id" binding:"required" example:"1"`
+	PurchasePrice float64 `json:"purchase_price" binding:"required,gt=0" example:"350"`
+	Quantity      float64 `json:"quantity" binding:"required,gt=0" example:"10"`
+}
+
+type UseServiceRequest struct {
+	SalonID  uint `json:"salon_id" binding:"required" example:"1"`
+	Quantity int  `json:"quantity" binding:"required,min=1" example:"1"`
+}
+
+type SetInventoryQuantityRequest struct {
+	Quantity float64 `json:"quantity" binding:"required,gte=0" example:"25"`
 }

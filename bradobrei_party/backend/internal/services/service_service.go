@@ -5,18 +5,29 @@ import (
 
 	"bradobrei/backend/internal/models"
 	"bradobrei/backend/internal/repository"
+
+	"gorm.io/gorm"
 )
 
 type ServiceService struct {
-	serviceRepo  *repository.ServiceRepository
-	employeeRepo *repository.EmployeeRepository
+	serviceRepo   *repository.ServiceRepository
+	employeeRepo  *repository.EmployeeRepository
+	inventoryRepo *repository.InventoryRepository
+	db            *gorm.DB
 }
 
 func NewServiceService(
 	serviceRepo *repository.ServiceRepository,
 	employeeRepo *repository.EmployeeRepository,
+	inventoryRepo *repository.InventoryRepository,
+	db *gorm.DB,
 ) *ServiceService {
-	return &ServiceService{serviceRepo: serviceRepo, employeeRepo: employeeRepo}
+	return &ServiceService{
+		serviceRepo:   serviceRepo,
+		employeeRepo:  employeeRepo,
+		inventoryRepo: inventoryRepo,
+		db:            db,
+	}
 }
 
 func (s *ServiceService) GetAll() ([]models.Service, error) {
@@ -72,4 +83,36 @@ func (s *ServiceService) AddToMaster(requesterID uint, requesterRole models.User
 // RemoveFromMaster — только ADVANCED_MASTER или Admin (ТЗ 2.3.3)
 func (s *ServiceService) RemoveFromMaster(profileID uint, serviceID uint) error {
 	return s.serviceRepo.RemoveFromMaster(profileID, serviceID)
+}
+
+// UseService — ручное списание материалов по услуге в конкретном салоне.
+func (s *ServiceService) UseService(serviceID, salonID uint, quantity int, userID uint) error {
+	if quantity <= 0 {
+		return errors.New("количество использований услуги должно быть больше нуля")
+	}
+
+	service, err := s.serviceRepo.GetByID(serviceID)
+	if err != nil {
+		return errors.New("услуга не найдена")
+	}
+
+	if len(service.Materials) == 0 {
+		return errors.New("для услуги не задана норма расхода материалов")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		inventoryRepo := repository.NewInventoryRepository(tx)
+		usageRepo := repository.NewServiceUsageRepository(tx)
+
+		if err := inventoryRepo.WriteOff(salonID, service.Materials, quantity); err != nil {
+			return errors.New("не удалось списать материалы со склада: " + err.Error())
+		}
+
+		return usageRepo.Create(&models.ServiceUsage{
+			ServiceID: serviceID,
+			SalonID:   salonID,
+			UserID:    userID,
+			Quantity:  quantity,
+		})
+	})
 }

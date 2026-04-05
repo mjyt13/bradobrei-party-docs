@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "client_id": 12,
+      "full_name": "Smoke Client",
+      "phone": "+79990000003",
+      "email": "client_smoke_1775367118@example.com",
+      "first_visit": "2026-04-06T10:32:01+05:00",
+      "last_visit": "2026-04-06T10:32:01+05:00",
+      "visit_count": 1,
+      "paid_total": 1800,
+      "bonus_status": "BASIC"
+    },
+    {
+      "client_id": 2,
+      "full_name": "Степан Сидоров",
+      "phone": "+79991234567",
+      "email": "stepan@example.com",
+      "visit_count": 0,
+      "paid_total": 0,
+      "bonus_status": "BASIC"
+    }
+  ],
+  "period": {
+    "from": "2026-03-29T00:00:00Z",
+    "to": "2026-04-12T00:00:00Z"
+  },
+  "report": "client_loyalty"
+}

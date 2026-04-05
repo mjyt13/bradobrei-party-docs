@@ -40,7 +40,7 @@
 
 - `2.2.3 Статистика востребованности услуг`
   - `GET /api/v1/reports/service-popularity`
-  - endpoint готов, PDF-шаблон можно добавить по той же схеме позднее
+  - сейчас учитываются бронирования со статусами `CONFIRMED`, `IN_PROGRESS`, `COMPLETED`
 
 - `2.2.4 Отчёт о производительности и ресурсо-затратности мастеров`
   - `GET /api/v1/reports/master-activity`
@@ -52,6 +52,24 @@
   - `POST /api/v1/reviews`
   - HTML/PDF модель: `models.ReviewsReportDocument`
   - шаблон: `internal/reports/templates/reviews.html`
+
+- `2.2.6 Ведомость движения товарно-материальных ценностей`
+  - `GET /api/v1/reports/inventory-movement`
+  - параметры: `from`, `to`, `salon_id`
+
+- `2.2.7 Анализ клиентской лояльности и удержания`
+  - `GET /api/v1/reports/client-loyalty`
+  - параметры: `from`, `to`
+  - `bonus_status` пока считается эвристически, пока отдельная бонусная модель не введена
+
+- `2.2.8 Реестр отменённых и нереализованных бронирований`
+  - `GET /api/v1/reports/cancelled-bookings`
+  - параметры: `from`, `to`
+
+- `2.2.9 Сводный финансовый отчёт по статьям издержек`
+  - `GET /api/v1/reports/financial-summary`
+  - параметры: `from`, `to`, `salon_id`
+  - строки отчёта пока формируются из статусов `payments`, так как отдельной модели статей расходов ещё нет
 
 ## Зависимости
 
@@ -167,7 +185,7 @@ go test ./tests -v -timeout 60s
 ### Весь backend
 
 ```bash
-go test ./... -v -timeout 90s
+go test ./... -v -timeout 120s
 ```
 
 Что уже покрыто:
@@ -178,7 +196,7 @@ go test ./... -v -timeout 90s
 - bookings
 - payments
 - reviews
-- reports
+- все 9 report endpoint’ов
 - helper-функции middleware, report parsing, coordinates normalization, salon IDs normalization
 
 Артефакты успешных сценариев сохраняются в:
@@ -186,6 +204,46 @@ go test ./... -v -timeout 90s
 ```text
 backend/test_artifacts/api_outputs.json
 ```
+
+## Smoke-скрипт для отчётов
+
+Для ручной проверки всех 9 JSON-отчётов и новых складских операций используйте bash-сценарий:
+
+```bash
+./scripts/run_reports_smoke.sh
+```
+
+Что делает сценарий:
+
+- логинится под уже существующим администратором `admin/password`
+- создаёт салон, услугу, материал и норму расхода
+- создаёт закупку материала через `POST /api/v1/material-expenses`, чтобы пополнить склад
+- нанимает мастера
+- регистрирует клиента
+- создаёт подтверждённое, отменённое и нереализованное бронирования
+- создаёт платежи и отзыв
+- вызывает все 9 report endpoint’ов
+- отдельно вызывает `POST /api/v1/services/{id}/use` как ручное списание материалов по услуге
+- сохраняет JSON-ответы в `backend/test_artifacts/report_smoke`
+
+Зависимости локального smoke-сценария:
+
+- `curl`
+- `jq`
+
+Если API поднят не на `http://localhost:9000`, можно передать адрес первым аргументом:
+
+```bash
+./scripts/run_reports_smoke.sh http://localhost:8080/api/v1
+```
+
+Или через переменные окружения:
+
+```bash
+API_BASE_URL=http://localhost:8080/api/v1 ADMIN_USERNAME=admin ADMIN_PASSWORD=password ./scripts/run_reports_smoke.sh
+```
+
+Старый PowerShell-сценарий оставлен в репозитории как вспомогательный, но для массивов JSON и повторяемых прогонов предпочтительнее bash-вариант.
 
 ## Gotenberg
 
@@ -323,5 +381,5 @@ go clean -cache
 ```powershell
 New-Item -ItemType Directory -Force '.gocache' | Out-Null
 $env:GOCACHE=(Resolve-Path '.gocache')
-go test ./... -v -timeout 90s
+go test ./... -v -timeout 120s
 ```

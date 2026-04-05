@@ -67,6 +67,26 @@ definitions:
     - rating
     - text
     type: object
+  dto.CreateServiceRequest:
+    properties:
+      description:
+        example: Стрижка с оформлением висков и затылка
+        type: string
+      duration_minutes:
+        example: 75
+        minimum: 1
+        type: integer
+      name:
+        example: Мужская стрижка
+        type: string
+      price:
+        example: 1800
+        type: number
+    required:
+    - duration_minutes
+    - name
+    - price
+    type: object
   dto.ErrorResponse:
     properties:
       code:
@@ -125,6 +145,48 @@ definitions:
     - full_name
     - password
     - username
+    type: object
+  dto.SetInventoryQuantityRequest:
+    properties:
+      quantity:
+        example: 25
+        minimum: 0
+        type: number
+    required:
+    - quantity
+    type: object
+  dto.UpdateServiceRequest:
+    properties:
+      description:
+        example: Стрижка с оформлением висков и затылка
+        type: string
+      duration_minutes:
+        example: 90
+        minimum: 1
+        type: integer
+      name:
+        example: Мужская стрижка
+        type: string
+      price:
+        example: 1900
+        type: number
+    required:
+    - duration_minutes
+    - name
+    - price
+    type: object
+  dto.UseServiceRequest:
+    properties:
+      quantity:
+        example: 1
+        minimum: 1
+        type: integer
+      salon_id:
+        example: 1
+        type: integer
+    required:
+    - quantity
+    - salon_id
     type: object
   dto.UserResponse:
     properties:
@@ -224,6 +286,23 @@ definitions:
       work_schedule:
         description: '{"mon":"9-18","tue":"9-18",...}'
         type: string
+    type: object
+  models.Inventory:
+    properties:
+      id:
+        type: integer
+      last_updated:
+        type: string
+      material:
+        $ref: '#/definitions/models.Material'
+      material_id:
+        type: integer
+      quantity:
+        type: number
+      salon:
+        $ref: '#/definitions/models.Salon'
+      salon_id:
+        type: integer
     type: object
   models.Material:
     properties:
@@ -630,6 +709,81 @@ paths:
       summary: Мои бронирования
       tags:
       - bookings
+  /inventories/salon/{salonId}:
+    get:
+      description: Возвращает фактические остатки материалов на складе выбранного
+        салона.
+      parameters:
+      - description: ID салона
+        in: path
+        name: salonId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Inventory'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Остатки материалов по салону
+      tags:
+      - inventories
+  /inventories/salon/{salonId}/material/{materialId}:
+    put:
+      consumes:
+      - application/json
+      description: Устанавливает фактическое количество материала на складе конкретного
+        салона по ID материала.
+      parameters:
+      - description: ID салона
+        in: path
+        name: salonId
+        required: true
+        type: integer
+      - description: ID материала
+        in: path
+        name: materialId
+        required: true
+        type: integer
+      - description: Новое количество материала
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SetInventoryQuantityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Inventory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновить остаток материала на складе
+      tags:
+      - inventories
   /materials:
     get:
       description: Возвращает все материалы.
@@ -923,6 +1077,70 @@ paths:
       summary: Платёж по ID
       tags:
       - payments
+  /reports/cancelled-bookings:
+    get:
+      parameters:
+      - description: Начало периода YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: Конец периода YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отчёт 2.2.8 Отменённые и нереализованные бронирования
+      tags:
+      - reports
+  /reports/client-loyalty:
+    get:
+      parameters:
+      - description: Начало периода YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: Конец периода YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отчёт 2.2.7 Анализ клиентской лояльности
+      tags:
+      - reports
   /reports/employees:
     get:
       produces:
@@ -940,6 +1158,78 @@ paths:
       security:
       - BearerAuth: []
       summary: Отчёт 2.2.1 Реестр персонала
+      tags:
+      - reports
+  /reports/financial-summary:
+    get:
+      parameters:
+      - description: Начало периода YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: Конец периода YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: ID салона
+        in: query
+        name: salon_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отчёт 2.2.9 Финансовый отчёт по транзакциям
+      tags:
+      - reports
+  /reports/inventory-movement:
+    get:
+      parameters:
+      - description: Начало периода YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: Конец периода YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: ID салона
+        in: query
+        name: salon_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отчёт 2.2.6 Ведомость движения ТМЦ
       tags:
       - reports
   /reports/master-activity:
@@ -976,6 +1266,15 @@ paths:
       - reports
   /reports/reviews:
     get:
+      parameters:
+      - description: Начало периода YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: Конец периода YYYY-MM-DD
+        in: query
+        name: to
+        type: string
       produces:
       - application/json
       responses:
@@ -1345,14 +1644,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Создаёт новую услугу.
+      description: Создаёт новую услугу. Материалы и мастера привязываются отдельными
+        ID-based endpoint'ами.
       parameters:
       - description: Данные услуги
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/models.Service'
+          $ref: '#/definitions/dto.CreateServiceRequest'
       produces:
       - application/json
       responses:
@@ -1431,7 +1731,8 @@ paths:
     put:
       consumes:
       - application/json
-      description: Обновляет существующую услугу.
+      description: Обновляет существующую услугу. Связи с мастерами и материалами
+        меняются отдельными endpoint'ами по ID.
       parameters:
       - description: ID услуги
         in: path
@@ -1443,7 +1744,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/models.Service'
+          $ref: '#/definitions/dto.UpdateServiceRequest'
       produces:
       - application/json
       responses:
@@ -1468,7 +1769,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Привязывает услугу к мастеру.
+      description: Привязывает услугу к мастеру по ID пользователя.
       parameters:
       - description: ID услуги
         in: path
@@ -1533,6 +1834,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Убрать услугу у мастера
+      tags:
+      - services
+  /services/{id}/use:
+    post:
+      consumes:
+      - application/json
+      description: 'Ручная складская операция: списывает материалы по норме расхода
+        услуги для выбранного салона.'
+      parameters:
+      - description: ID услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Салон и количество использований
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UseServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Списать материалы по услуге
       tags:
       - services
   /services/my:

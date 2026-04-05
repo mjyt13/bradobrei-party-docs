@@ -159,6 +159,38 @@ type Inventory struct {
 	Material Material `json:"material,omitempty"`
 }
 
+// MaterialExpense фиксирует закупку или расходную операцию по материалу для салона.
+// На текущем этапе хранит цену закупки и количество, а сервисный слой синхронно
+// отражает операцию в фактическом остатке inventory.
+type MaterialExpense struct {
+	ID            uint      `gorm:"primaryKey"                  json:"id"`
+	MaterialID    uint      `gorm:"not null;index"              json:"material_id"`
+	SalonID       uint      `gorm:"not null;index"              json:"salon_id"`
+	PurchasePrice float64   `gorm:"type:decimal(10,2);not null" json:"purchase_price"`
+	Quantity      float64   `gorm:"type:decimal(10,2);not null" json:"quantity"`
+	CreatedAt     time.Time `                                   json:"created_at"`
+	UpdatedAt     time.Time `                                   json:"updated_at"`
+
+	Material Material `gorm:"foreignKey:MaterialID" json:"material,omitempty"`
+	Salon    Salon    `gorm:"foreignKey:SalonID"    json:"salon,omitempty"`
+}
+
+// ServiceUsage фиксирует ручное использование услуги вне сценария подтверждения бронирования.
+// Нужен как журнал складских операций, чтобы отчёт 2.2.6 видел списания,
+// выполненные отдельной командой /services/{id}/use.
+type ServiceUsage struct {
+	ID        uint      `gorm:"primaryKey"     json:"id"`
+	ServiceID uint      `gorm:"not null;index" json:"service_id"`
+	SalonID   uint      `gorm:"not null;index" json:"salon_id"`
+	UserID    uint      `gorm:"not null;index" json:"user_id"`
+	Quantity  int       `gorm:"not null"       json:"quantity"`
+	CreatedAt time.Time `                      json:"created_at"`
+
+	Service Service `gorm:"foreignKey:ServiceID" json:"service,omitempty"`
+	Salon   Salon   `gorm:"foreignKey:SalonID"   json:"salon,omitempty"`
+	User    User    `gorm:"foreignKey:UserID"    json:"user,omitempty"`
+}
+
 // Booking — запись клиента на набор услуг.
 // Нужна для отчётов по загрузке салонов, мастеров и лояльности клиентов.
 // Уже сейчас участвует минимум в требованиях 2.2.2, 2.2.4, 2.2.7 и 2.2.8,
@@ -257,8 +289,8 @@ type EmployeeRegistryReportRow struct {
 
 // SalonActivityReportDocument — представление отчёта 2.2.2 для HTML/PDF.
 type SalonActivityReportDocument struct {
-	Meta ReportMeta                `json:"meta"`
-	Rows []SalonActivityReportRow  `json:"rows"`
+	Meta ReportMeta               `json:"meta"`
+	Rows []SalonActivityReportRow `json:"rows"`
 }
 
 type SalonActivityReportRow struct {
@@ -272,8 +304,8 @@ type SalonActivityReportRow struct {
 
 // MasterActivityReportDocument — представление отчёта 2.2.4 для HTML/PDF.
 type MasterActivityReportDocument struct {
-	Meta ReportMeta                 `json:"meta"`
-	Rows []MasterActivityReportRow  `json:"rows"`
+	Meta ReportMeta                `json:"meta"`
+	Rows []MasterActivityReportRow `json:"rows"`
 }
 
 type MasterActivityReportRow struct {
@@ -286,8 +318,8 @@ type MasterActivityReportRow struct {
 
 // ReviewsReportDocument — представление отчёта 2.2.5 для HTML/PDF.
 type ReviewsReportDocument struct {
-	Meta ReportMeta           `json:"meta"`
-	Rows []ReviewsReportRow   `json:"rows"`
+	Meta ReportMeta         `json:"meta"`
+	Rows []ReviewsReportRow `json:"rows"`
 }
 
 type ReviewsReportRow struct {

@@ -386,6 +386,120 @@ const docTemplate = `{
                 }
             }
         },
+        "/inventories/salon/{salonId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает фактические остатки материалов на складе выбранного салона.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Остатки материалов по салону",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID салона",
+                        "name": "salonId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Inventory"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventories/salon/{salonId}/material/{materialId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Устанавливает фактическое количество материала на складе конкретного салона по ID материала.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Обновить остаток материала на складе",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID салона",
+                        "name": "salonId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID материала",
+                        "name": "materialId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новое количество материала",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SetInventoryQuantityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Inventory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/materials": {
             "get": {
                 "security": [
@@ -848,6 +962,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/reports/cancelled-bookings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Отчёт 2.2.8 Отменённые и нереализованные бронирования",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало периода YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец периода YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/client-loyalty": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Отчёт 2.2.7 Анализ клиентской лояльности",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало периода YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец периода YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/reports/employees": {
             "get": {
                 "security": [
@@ -868,6 +1084,120 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/financial-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Отчёт 2.2.9 Финансовый отчёт по транзакциям",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало периода YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец периода YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID салона",
+                        "name": "salon_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/inventory-movement": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Отчёт 2.2.6 Ведомость движения ТМЦ",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало периода YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец периода YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID салона",
+                        "name": "salon_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
@@ -944,6 +1274,20 @@ const docTemplate = `{
                     "reports"
                 ],
                 "summary": "Отчёт 2.2.5 Отзывы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало периода YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец периода YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1518,7 +1862,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Создаёт новую услугу.",
+                "description": "Создаёт новую услугу. Материалы и мастера привязываются отдельными ID-based endpoint'ами.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1536,7 +1880,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Service"
+                            "$ref": "#/definitions/dto.CreateServiceRequest"
                         }
                     }
                 ],
@@ -1641,7 +1985,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Обновляет существующую услугу.",
+                "description": "Обновляет существующую услугу. Связи с мастерами и материалами меняются отдельными endpoint'ами по ID.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1666,7 +2010,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Service"
+                            "$ref": "#/definitions/dto.UpdateServiceRequest"
                         }
                     }
                 ],
@@ -1746,7 +2090,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Привязывает услугу к мастеру.",
+                "description": "Привязывает услугу к мастеру по ID пользователя.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1843,6 +2187,67 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/services/{id}/use": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ручная складская операция: списывает материалы по норме расхода услуги для выбранного салона.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "services"
+                ],
+                "summary": "Списать материалы по услуге",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID услуги",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Салон и количество использований",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UseServiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1948,6 +2353,33 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CreateServiceRequest": {
+            "type": "object",
+            "required": [
+                "duration_minutes",
+                "name",
+                "price"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Стрижка с оформлением висков и затылка"
+                },
+                "duration_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 75
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Мужская стрижка"
+                },
+                "price": {
+                    "type": "number",
+                    "example": 1800
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -2029,6 +2461,64 @@ const docTemplate = `{
                     "maxLength": 50,
                     "minLength": 3,
                     "example": "admin"
+                }
+            }
+        },
+        "dto.SetInventoryQuantityRequest": {
+            "type": "object",
+            "required": [
+                "quantity"
+            ],
+            "properties": {
+                "quantity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 25
+                }
+            }
+        },
+        "dto.UpdateServiceRequest": {
+            "type": "object",
+            "required": [
+                "duration_minutes",
+                "name",
+                "price"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Стрижка с оформлением висков и затылка"
+                },
+                "duration_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 90
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Мужская стрижка"
+                },
+                "price": {
+                    "type": "number",
+                    "example": 1900
+                }
+            }
+        },
+        "dto.UseServiceRequest": {
+            "type": "object",
+            "required": [
+                "quantity",
+                "salon_id"
+            ],
+            "properties": {
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                },
+                "salon_id": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -2175,6 +2665,32 @@ const docTemplate = `{
                 "work_schedule": {
                     "description": "{\"mon\":\"9-18\",\"tue\":\"9-18\",...}",
                     "type": "string"
+                }
+            }
+        },
+        "models.Inventory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "last_updated": {
+                    "type": "string"
+                },
+                "material": {
+                    "$ref": "#/definitions/models.Material"
+                },
+                "material_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "salon": {
+                    "$ref": "#/definitions/models.Salon"
+                },
+                "salon_id": {
+                    "type": "integer"
                 }
             }
         },

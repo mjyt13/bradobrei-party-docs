@@ -88,18 +88,18 @@ func (h *ServiceHandler) GetMy(c *gin.Context) {
 
 // Create godoc
 // @Summary Создать услугу
-// @Description Создаёт новую услугу.
+// @Description Создаёт новую услугу. Материалы и мастера привязываются отдельными ID-based endpoint'ами.
 // @Tags services
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body models.Service true "Данные услуги"
+// @Param request body dto.CreateServiceRequest true "Данные услуги"
 // @Success 201 {object} models.Service
 // @Failure 400 {object} dto.ErrorResponse
 // @Router /services [post]
 func (h *ServiceHandler) Create(c *gin.Context) {
-	var svc models.Service
-	if err := c.ShouldBindJSON(&svc); err != nil {
+	var req dto.CreateServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "bad_request",
 			Code:    400,
@@ -107,6 +107,14 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		})
 		return
 	}
+
+	svc := models.Service{
+		Name:            req.Name,
+		Description:     req.Description,
+		Price:           req.Price,
+		DurationMinutes: req.DurationMinutes,
+	}
+
 	if err := h.serviceService.Create(&svc); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "validation_error",
@@ -120,13 +128,13 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 
 // Update godoc
 // @Summary Обновить услугу
-// @Description Обновляет существующую услугу.
+// @Description Обновляет существующую услугу. Связи с мастерами и материалами меняются отдельными endpoint'ами по ID.
 // @Tags services
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "ID услуги"
-// @Param request body models.Service true "Обновлённые данные услуги"
+// @Param request body dto.UpdateServiceRequest true "Обновлённые данные услуги"
 // @Success 200 {object} models.Service
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -146,7 +154,9 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		})
 		return
 	}
-	if err := c.ShouldBindJSON(existing); err != nil {
+
+	var req dto.UpdateServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "bad_request",
 			Code:    400,
@@ -154,7 +164,13 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		})
 		return
 	}
+
+	existing.Name = req.Name
+	existing.Description = req.Description
+	existing.Price = req.Price
+	existing.DurationMinutes = req.DurationMinutes
 	existing.ID = uint(id)
+
 	if err := h.serviceService.Update(existing); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "validation_error",
@@ -192,7 +208,7 @@ func (h *ServiceHandler) Delete(c *gin.Context) {
 
 // AssignToMaster godoc
 // @Summary Назначить услугу мастеру
-// @Description Привязывает услугу к мастеру.
+// @Description Привязывает услугу к мастеру по ID пользователя.
 // @Tags services
 // @Accept json
 // @Produce json
@@ -254,4 +270,51 @@ func (h *ServiceHandler) RemoveFromMaster(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Услуга убрана у мастера"})
+}
+
+// Use godoc
+// @Summary Списать материалы по услуге
+// @Description Ручная складская операция: списывает материалы по норме расхода услуги для выбранного салона.
+// @Tags services
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID услуги"
+// @Param request body dto.UseServiceRequest true "Салон и количество использований"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /services/{id}/use [post]
+func (h *ServiceHandler) Use(c *gin.Context) {
+	claims, _ := middleware.GetCurrentClaims(c)
+	serviceID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Code: 400})
+		return
+	}
+
+	var req dto.UseServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "bad_request",
+			Code:    400,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err := h.serviceService.UseService(uint(serviceID), req.SalonID, req.Quantity, claims.UserID); err != nil {
+		status := http.StatusBadRequest
+		if err.Error() == "услуга не найдена" {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, dto.ErrorResponse{
+			Error:   "service_use_failed",
+			Code:    status,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Материалы по услуге списаны"})
 }

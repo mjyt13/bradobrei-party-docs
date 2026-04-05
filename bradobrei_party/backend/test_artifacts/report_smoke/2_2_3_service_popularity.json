@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "service_id": 2,
+      "service_name": "Smoke Service 1775367118",
+      "usage_count": 3,
+      "relative_freq": 3
+    },
+    {
+      "service_id": 1,
+      "service_name": "Smoke Service 1775364137",
+      "usage_count": 0,
+      "relative_freq": 0
+    }
+  ],
+  "period": {
+    "from": "2026-03-29T00:00:00Z",
+    "to": "2026-04-12T00:00:00Z"
+  },
+  "report": "service_popularity"
+}
